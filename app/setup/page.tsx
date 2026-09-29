@@ -1,0 +1,1 @@
+import Link from 'next/link';export default function Setup(){return <main className="container"><div className="panel"><h1>Game Setup</h1><p className="muted">Choose a game mode and player count to start.</p><Link className="button" href="/mode">Open Mode Setup</Link></div></main>}

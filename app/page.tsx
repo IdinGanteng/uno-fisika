@@ -1,0 +1,2 @@
+import Link from 'next/link';
+export default function Home(){return <main className="hero container"><p className="muted">4 COLORS ARENA</p><h1 className="title">Color. Match. Conquer.</h1><p className="muted">Reconstructed editable Next.js source from the exported build.</p><div className="row" style={{justifyContent:'center',marginTop:30}}><Link className="button" href="/mode">Start Game</Link><Link className="button secondary" href="/physics">Physics Arena</Link></div></main>}
