@@ -1,2 +1,254 @@
-'use client';import {useEffect,useMemo,useState} from 'react';import {useSearchParams} from 'next/navigation';import Card from '@/components/Card';import {createNewGame,drawCard,getBotAction,getPlayableCards,passTurn,playCard,callLastCard,GameState} from '@/lib/game';
-export default function Game(){const q=useSearchParams();const mode=(q.get('mode')==='hotseat'?'hotseat':'bot') as 'bot'|'hotseat';const count=Math.min(4,Math.max(2,Number(q.get('players')||2)));const names=useMemo(()=>Array.from({length:count},(_,i)=>mode==='bot'?(i===0?'You':`Bot ${i}`):`Player ${i+1}`),[count,mode]);const [s,setS]=useState<GameState|null>(null);useEffect(()=>{setS(createNewGame({mode,playerCount:count,relaxedWild4:false},names))},[mode,count,names]);useEffect(()=>{if(!s||s.status!=='playing')return;const p=s.players[s.currentPlayerIndex];if(!p.isBot)return;const timer=setTimeout(()=>{const a=getBotAction(s);setS(x=>!x?x:a.type==='play'?playCard(x,a.cardId,a.chosenColor):a.type==='draw'?drawCard(x):passTurn(x))},900);return()=>clearTimeout(timer)},[s]);if(!s)return <main className="container"><p>Loading...</p></main>;const p=s.players[s.currentPlayerIndex];const playable=new Set(getPlayableCards(s).map(c=>c.id));return <main className="container"><div className="row space"><div><h1>4 Colors Arena</h1><p className="muted">Turn: {p.name} · Active: {s.activeColor}</p></div><div className="row"><button className="secondary" onClick={()=>setS(createNewGame({mode,playerCount:count,relaxedWild4:false},names))}>New Game</button></div></div><div className="panel" style={{marginTop:20}}><div className="row space"><div><span className="muted">Discard</span><div style={{marginTop:10}}><Card card={s.discardPile.at(-1)}/></div></div><div><span className="muted">Draw pile: {s.drawPile.length}</span><div style={{marginTop:10}}><Card faceDown onClick={()=>p.isBot?null:setS(drawCard(s))}/></div></div></div></div><div className="panel" style={{marginTop:20}}><h2>{p.name}'s hand</h2><div className="hand">{p.hand.map(c=><Card key={c.id} card={c} onClick={()=>{if(!p.isBot&&playable.has(c.id)){const wild=c.value==='wild'||c.value==='wild4';setS(playCard(s,c.id,wild?'red':undefined))}}}/>)}</div><div className="row" style={{marginTop:20}}><button className="secondary" disabled={p.isBot||!s.drawnThisTurn} onClick={()=>setS(passTurn(s))}>Pass</button>{p.hand.length===1&&<button onClick={()=>setS(callLastCard(s,p.id))}>Last Card!</button>}</div></div>{s.status==='finished'&&<div className="panel" style={{marginTop:20,textAlign:'center'}}><h2>Winner: {s.winner?.name}</h2><button onClick={()=>setS(createNewGame({mode,playerCount:count,relaxedWild4:false},names))}>Play Again</button></div>}</main>}
+"use client";
+
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import Card from "@/components/Card";
+import {
+  createNewGame,
+  drawCard,
+  getBotAction,
+  getPlayableCards,
+  passTurn,
+  playCard,
+  callLastCard,
+  GameState,
+} from "@/lib/game";
+
+function GameContent() {
+  const q = useSearchParams();
+
+  const mode = (q.get("mode") === "hotseat" ? "hotseat" : "bot") as
+    | "bot"
+    | "hotseat";
+
+  const count = Math.min(
+    4,
+    Math.max(2, Number(q.get("players") || 2)),
+  );
+
+  const names = useMemo(
+    () =>
+      Array.from({ length: count }, (_, i) =>
+        mode === "bot"
+          ? i === 0
+            ? "You"
+            : `Bot ${i}`
+          : `Player ${i + 1}`,
+      ),
+    [count, mode],
+  );
+
+  const [s, setS] = useState<GameState | null>(null);
+
+  useEffect(() => {
+    setS(
+      createNewGame(
+        {
+          mode,
+          playerCount: count,
+          relaxedWild4: false,
+        },
+        names,
+      ),
+    );
+  }, [mode, count, names]);
+
+  useEffect(() => {
+    if (!s || s.status !== "playing") return;
+
+    const p = s.players[s.currentPlayerIndex];
+
+    if (!p.isBot) return;
+
+    const timer = setTimeout(() => {
+      const a = getBotAction(s);
+
+      setS((x) =>
+        !x
+          ? x
+          : a.type === "play"
+            ? playCard(x, a.cardId, a.chosenColor)
+            : a.type === "draw"
+              ? drawCard(x)
+              : passTurn(x),
+      );
+    }, 900);
+
+    return () => clearTimeout(timer);
+  }, [s]);
+
+  if (!s) {
+    return (
+      <main className="container">
+        <p>Loading...</p>
+      </main>
+    );
+  }
+
+  const p = s.players[s.currentPlayerIndex];
+
+  const playable = new Set(
+    getPlayableCards(s).map((c) => c.id),
+  );
+
+  return (
+    <main className="container">
+      <div className="row space">
+        <div>
+          <h1>4 Colors Arena</h1>
+
+          <p className="muted">
+            Turn: {p.name} · Active: {s.activeColor}
+          </p>
+        </div>
+
+        <div className="row">
+          <button
+            className="secondary"
+            onClick={() =>
+              setS(
+                createNewGame(
+                  {
+                    mode,
+                    playerCount: count,
+                    relaxedWild4: false,
+                  },
+                  names,
+                ),
+              )
+            }
+          >
+            New Game
+          </button>
+        </div>
+      </div>
+
+      <div
+        className="panel"
+        style={{ marginTop: 20 }}
+      >
+        <div className="row space">
+          <div>
+            <span className="muted">Discard</span>
+
+            <div style={{ marginTop: 10 }}>
+              <Card card={s.discardPile.at(-1)} />
+            </div>
+          </div>
+
+          <div>
+            <span className="muted">
+              Draw pile: {s.drawPile.length}
+            </span>
+
+            <div style={{ marginTop: 10 }}>
+              <Card
+                faceDown
+                onClick={() =>
+                  p.isBot ? null : setS(drawCard(s))
+                }
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="panel"
+        style={{ marginTop: 20 }}
+      >
+        <h2>{p.name}'s hand</h2>
+
+        <div className="hand">
+          {p.hand.map((c) => (
+            <Card
+              key={c.id}
+              card={c}
+              onClick={() => {
+                if (!p.isBot && playable.has(c.id)) {
+                  const wild =
+                    c.value === "wild" ||
+                    c.value === "wild4";
+
+                  setS(
+                    playCard(
+                      s,
+                      c.id,
+                      wild ? "red" : undefined,
+                    ),
+                  );
+                }
+              }}
+            />
+          ))}
+        </div>
+
+        <div
+          className="row"
+          style={{ marginTop: 20 }}
+        >
+          <button
+            className="secondary"
+            disabled={p.isBot || !s.drawnThisTurn}
+            onClick={() => setS(passTurn(s))}
+          >
+            Pass
+          </button>
+
+          {p.hand.length === 1 && (
+            <button
+              onClick={() =>
+                setS(callLastCard(s, p.id))
+              }
+            >
+              Last Card!
+            </button>
+          )}
+        </div>
+      </div>
+
+      {s.status === "finished" && (
+        <div
+          className="panel"
+          style={{
+            marginTop: 20,
+            textAlign: "center",
+          }}
+        >
+          <h2>Winner: {s.winner?.name}</h2>
+
+          <button
+            onClick={() =>
+              setS(
+                createNewGame(
+                  {
+                    mode,
+                    playerCount: count,
+                    relaxedWild4: false,
+                  },
+                  names,
+                ),
+              )
+            }
+          >
+            Play Again
+          </button>
+        </div>
+      )}
+    </main>
+  );
+}
+
+export default function Game() {
+  return (
+    <Suspense
+      fallback={
+        <main className="container">
+          <p>Loading game...</p>
+        </main>
+      }
+    >
+      <GameContent />
+    </Suspense>
+  );
+}
